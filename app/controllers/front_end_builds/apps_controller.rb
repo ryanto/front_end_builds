@@ -2,7 +2,11 @@ require_dependency "front_end_builds/application_controller"
 
 module FrontEndBuilds
   class AppsController < ApplicationController
-    before_filter :set_app , :only => [:show, :destroy, :update]
+    if Rails::VERSION::MAJOR > 4
+      before_action :set_app , :only => [:show, :destroy, :update]
+    else
+      before_action :set_app , :only => [:show, :destroy, :update]
+    end
 
     def index
       apps = App.includes(:recent_builds)
@@ -82,6 +86,8 @@ module FrontEndBuilds
         :name
       )
     end
+    
+    alias_method :app_create_params_rails_5, :app_create_params_rails_4
 
     def app_update_params_rails_3
       params[:app].slice(
@@ -98,6 +104,8 @@ module FrontEndBuilds
         :live_build_id
       )
     end
+
+    alias_method :app_update_params_rails_5, :app_update_params_rails_4
 
   end
 end

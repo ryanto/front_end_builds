@@ -10,7 +10,7 @@ module FrontEndBuilds
       it "should list all the builds for an app" do
         FactoryGirl.create_list(:front_end_builds_build, 3, app: app)
 
-        get :index, app_id: app.id, format: :json
+        get :index, params: { app_id: app.id }, format: :json
         expect(response).to be_success
         expect(json['builds'].length).to eq(3)
       end
@@ -19,7 +19,7 @@ module FrontEndBuilds
         build1 = FactoryGirl.create(:front_end_builds_build, app: app)
         FactoryGirl.create(:front_end_builds_build)
 
-        get :index, app_id: app.id, format: :json
+        get :index, params: { app_id: app.id }, format: :json
         expect(response).to be_success
         expect(json['builds'].length).to eq(1)
         expect(json['builds'].first['id']).to eq(build1.id)
@@ -40,7 +40,7 @@ module FrontEndBuilds
       let(:build) { FactoryGirl.create :front_end_builds_build }
 
       it "should load the app" do
-        get :show, id: build.id, format: :json
+        get :show, params: { id: build.id }, format: :json
         expect(response).to be_success
         expect(json['build']['id']).to eq(build.id)
       end
@@ -66,14 +66,15 @@ module FrontEndBuilds
       it "should create the new build, and make it live" do
         expect(app.live_build.html).to eq('the old build')
 
-        post :create, {
-          app_name: app.name,
-          branch: 'master',
-          sha: 'some-sha',
-          job: '1',
-          endpoint: endpoint,
-          signature: create_signature("#{app.name}-#{endpoint}")
-        }
+        post :create,
+          params: {
+            app_name: app.name,
+            branch: 'master',
+            sha: 'some-sha',
+            job: '1',
+            endpoint: endpoint,
+            signature: create_signature("#{app.name}-#{endpoint}")
+          }
 
         expect(response).to be_success
         expect(app.reload.live_build.html).to eq('fetched html')
@@ -82,14 +83,15 @@ module FrontEndBuilds
       it "should not make a new build live if it's non-master" do
         expect(app.live_build.html).to eq('the old build')
 
-        post :create, {
-          app_name: app.name,
-          branch: 'some-feature',
-          sha: 'some-sha',
-          job: '1',
-          endpoint: endpoint,
-          signature: create_signature("#{app.name}-#{endpoint}")
-        }
+        post :create,
+          params: {
+            app_name: app.name,
+            branch: 'some-feature',
+            sha: 'some-sha',
+            job: '1',
+            endpoint: endpoint,
+            signature: create_signature("#{app.name}-#{endpoint}")
+          }
 
         expect(response).to be_success
         expect(app.reload.live_build.html).to eq('the old build')
@@ -98,14 +100,15 @@ module FrontEndBuilds
       it "should not active a build if the app requires manual activiation" do
         app.update_attributes(require_manual_activation: true)
 
-        post :create, {
-          app_name: app.name,
-          branch: 'master',
-          sha: 'some-sha',
-          job: '1',
-          endpoint: endpoint,
-          signature: create_signature("#{app.name}-#{endpoint}")
-        }
+        post :create,
+          params: {
+            app_name: app.name,
+            branch: 'master',
+            sha: 'some-sha',
+            job: '1',
+            endpoint: endpoint,
+            signature: create_signature("#{app.name}-#{endpoint}")
+          }
 
         expect(response).to be_success
         expect(app.live_build.html).to eq('the old build')
@@ -114,14 +117,15 @@ module FrontEndBuilds
       it 'should error if the app cannot be found' do
         app.update_attributes(require_manual_activation: true)
 
-        post :create, {
-          app_name: 'this-does-not-exist',
-          branch: 'master',
-          sha: 'some-sha',
-          job: '1',
-          endpoint: endpoint,
-          signature: create_signature("unknown-#{endpoint}")
-        }
+        post :create,
+          params: {
+            app_name: 'this-does-not-exist',
+            branch: 'master',
+            sha: 'some-sha',
+            job: '1',
+            endpoint: endpoint,
+            signature: create_signature("unknown-#{endpoint}")
+          }
 
         expect(response).to_not be_success
         expect(response.body).to eq('No app named this-does-not-exist.')
@@ -132,38 +136,41 @@ module FrontEndBuilds
         digest = OpenSSL::Digest::SHA256.new
         signature = pkey.sign(digest, "#{app.name}-#{endpoint}")
 
-        post :create, {
-          app_name: app.name,
-          branch: 'master',
-          sha: 'some-sha',
-          job: '1',
-          endpoint: endpoint,
-          signature: Base64.encode64(signature)
-        }
+        post :create,
+          params: {
+            app_name: app.name,
+            branch: 'master',
+            sha: 'some-sha',
+            job: '1',
+            endpoint: endpoint,
+            signature: Base64.encode64(signature)
+          }
 
         expect(response).to_not be_success
         expect(response.body).to match("No access - invalid SSH key")
       end
 
       it "should error if not all fields are present" do
-        post :create, {
-          app_name: app.name,
-          endpoint: endpoint,
-          signature: create_signature("#{app.name}-#{endpoint}")
-        }
+        post :create,
+          params: {
+            app_name: app.name,
+            endpoint: endpoint,
+            signature: create_signature("#{app.name}-#{endpoint}")
+          }
         expect(response).to_not be_success
         expect(response.body).to match("Sha can't be blank")
       end
 
       it 'should let the html be submitted' do
-        post :create, {
-          app_name: app.name,
-          branch: 'master',
-          sha: 'some-sha',
-          job: '1',
-          html: 'hello world',
-          signature: create_signature('hello world')
-        }
+        post :create,
+          params: {
+            app_name: app.name,
+            branch: 'master',
+            sha: 'some-sha',
+            job: '1',
+            html: 'hello world',
+            signature: create_signature('hello world')
+          }
 
         expect(response).to be_success
         expect(app.live_build.html).to eq('the old build')

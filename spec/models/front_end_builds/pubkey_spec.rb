@@ -75,7 +75,7 @@ module FrontEndBuilds
           pubkey: 'badkey'
         })
 
-        expect { pubkey.to_rsa_pkey }.to raise_error
+        expect { pubkey.to_rsa_pkey }.to raise_error(ArgumentError)
       end
     end
 
